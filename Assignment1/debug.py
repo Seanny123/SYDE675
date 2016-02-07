@@ -19,41 +19,38 @@ def trans_cov(dat, cov, mean=np.array([[0],[0]])):
 def knn(c1, c2, k):
     # initiaslise with K points from each class
     zero_shape = (c1.shape[0], c1.shape[1]*2)
-    c_orig = np.concatenate((c1, c2), axis=1)
+    c1_res = np.zeros(zero_shape)
+    c1_count = 0
+    c2_res = np.zeros(zero_shape)
+    c2_count = 0
     c_all = np.concatenate((c1, c2), axis=1)
-    c1_del_count = 0
 
     # because numpy nditer is psychotic
-    for c_ind in xrange(c_orig.shape[1]):
-        val = c_orig[:, c_ind]
+    for c_ind in xrange(c_all.shape[1]):
+        val = c_all[:, c_ind]
         #find the nearest K neighbours
         print(val)
-        #ipdb.set_trace()
+        if np.allclose(val, np.array([-2, 0])):
+            ipdb.set_trace()
         ind = np.argpartition(norm(c_all.T - val, axis=1), k+1)[:k+1][1:k+1]
         
         # class the point where the majority of the neighbours are
         sort_res = 0
         for ix in ind:
-            if ix < c1.shape[0]:
+            if ix < c1.shape[1]:
                 sort_res += 1
             else:
                 sort_res -= 1
 
-        # because c2_del_count has no effect
-        actual_ind = c_ind - c1_del_count
-        if sort_res > 0 and actual_ind > c1.shape[1]:
-            print("Swapping: %s" %val)
-            c2 = np.delete(c2, (actual_ind - c1.shape[1]), axis=1)
-            ipdb
-            c1 = np.append(c1, val).reshape((2,-1))
-        elif sort_res < 0 and actual_ind < c1.shape[1]:
-            print("Swapping: %s" %val)
-            c1 = np.delete(c1, actual_ind, axis=1)
-            c2 = np.append(c2, val).reshape((2,-1))
+        if sort_res > 0:
+            c1_res[:, c1_count] = val
+            c1_count += 1
+        else:
+            c2_res[:, c2_count] = val
+            c2_count += 1
 
-        c_all = np.concatenate((c1, c2), axis=1)
-
-    return (c1, c2)
+    assert c1_count + c2_count == c1.shape[1] + c1.shape[1]
+    return (c1_res[:, :c1_count], c2_res[:, :c2_count])
 
 
 dats = [
@@ -68,13 +65,20 @@ dats = [
         ]
 
 dat = [
-    np.array([[-1, 0], [-1, 1], [-1,-1], [2, 0]]).T,
-    np.array([[1, 0], [1, 1], [1,-1], [-2, 0]]).T
+    np.array([[-2, 0], [-2, 1], [-2,-1], [3, 0]]).T,
+    np.array([[2, 0], [2, 1], [2,-1], [-3, 0]]).T
 ]
 
-res_1, res_2 = knn(dat[0], dat[1], 1)
+"""
+# red left, blue right
+fig = plt.figure()
+plt.scatter(dat[0][0], dat[0][1], color="red")
+plt.scatter(dat[1][0], dat[1][1], color="blue")
+plt.show()
+"""
+
+res_1, res_2 = knn(dat[0], dat[1], 3)
 fig = plt.figure()
 plt.scatter(res_1[0], res_1[1], color="red")
 plt.scatter(res_2[0], res_2[1], color="blue")
 plt.show()
-ipdb.set_trace()
