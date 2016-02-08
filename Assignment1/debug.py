@@ -2,6 +2,7 @@ import numpy as np
 from numpy.linalg import norm, inv
 import scipy.linalg
 import scipy.io
+from scipy.interpolate import griddata
 import matplotlib.pyplot as plt
 import ipdb
 
@@ -16,41 +17,19 @@ def trans_cov(dat, cov, mean=np.array([[0],[0]])):
     
     return res
 
-def knn(c1, c2, k):
-    # initiaslise with K points from each class
-    zero_shape = (c1.shape[0], c1.shape[1]*2)
-    c1_res = np.zeros(zero_shape)
-    c1_count = 0
-    c2_res = np.zeros(zero_shape)
-    c2_count = 0
-    c_all = np.concatenate((c1, c2), axis=1)
-
-    # because numpy nditer is psychotic
-    for c_ind in xrange(c_all.shape[1]):
-        val = c_all[:, c_ind]
-        #find the nearest K neighbours
-        print(val)
-        if np.allclose(val, np.array([-2, 0])):
-            ipdb.set_trace()
-        ind = np.argpartition(norm(c_all.T - val, axis=1), k+1)[:k+1][1:k+1]
-        
-        # class the point where the majority of the neighbours are
-        sort_res = 0
-        for ix in ind:
-            if ix < c1.shape[1]:
-                sort_res += 1
-            else:
-                sort_res -= 1
-
-        if sort_res > 0:
-            c1_res[:, c1_count] = val
-            c1_count += 1
-        else:
-            c2_res[:, c2_count] = val
-            c2_count += 1
-
-    assert c1_count + c2_count == c1.shape[1] + c1.shape[1]
-    return (c1_res[:, :c1_count], c2_res[:, :c2_count])
+def map_class(c1, c2):
+    e1 = np.cov(c1)
+    e2 = np.cov(c2)
+    u1 = np.mean(c1, axis=1)
+    u2 = np.mean(c2, axis=1)
+    
+    def f(x):
+        #ipdb.set_trace()
+        return np.log(np.sqrt(norm(e2))/np.sqrt(norm(e1))) \
+               -0.5*np.dot(np.dot((x - u1),inv(e1)),(x - u1).T) \
+               +0.5*np.dot(np.dot((x - u2),inv(e2)),(x - u2).T) \
+                < 0
+    return f
 
 
 dats = [
@@ -77,8 +56,36 @@ plt.scatter(dat[1][0], dat[1][1], color="blue")
 plt.show()
 """
 
-res_1, res_2 = knn(dat[0], dat[1], 3)
-fig = plt.figure()
-plt.scatter(res_1[0], res_1[1], color="red")
-plt.scatter(res_2[0], res_2[1], color="blue")
+map_func = map_class(dat[0], dat[1])
+dat_list = list(np.concatenate((dat[0], dat[1]), axis=1).T)
+
+res = []
+for d_l in dat_list:
+    res.append(map_func(d_l))
+
+
+# grid the whole space
+all_dat = np.array(dat_list)
+a_res = np.array(res, dtype=np.int)
+a_res[a_res == 0] = -1
+
+blue = all_dat[a_res == -1]
+red = all_dat[a_res == 1]
+plt.scatter(blue[:, 0], blue[:, 1], color="red")
+plt.scatter(red[:, 0], red[:, 1], color="blue")
+
+min_x = np.min(all_dat[:, 0])
+max_x = np.max(all_dat[:, 0])
+min_y = np.min(all_dat[:, 1])
+max_y = np.max(all_dat[:, 1])
+delta = 0.01
+x = np.arange(min_x, max_x, delta)
+y = np.arange(min_y, max_x, delta)
+grid_x, grid_y = np.meshgrid(x, y)
+#grid_x, grid_y = np.mgrid[min_x:max_x:500j, min_y:max_y:500j]
+grid_res = griddata(all_dat, a_res, (grid_x, grid_y), method='cubic')
+plt.contour(grid_x.T, grid_y.T, grid_res.T)
 plt.show()
+
+# poke values in the correct places
+#ipdb.set_trace()
