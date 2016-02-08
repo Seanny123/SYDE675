@@ -31,7 +31,7 @@ def map_class(c1, c2):
                 < 0
     return f
 
-
+"""
 dats = [
             [trans_cov(np.random.randn(2, 200), np.eye(2)),
              trans_cov(np.random.randn(2, 200), np.eye(2), np.array([[3],[0]]))],
@@ -43,11 +43,12 @@ dats = [
              trans_cov(np.random.randn(2, 200), np.array([[7,-3],[-3,4]]), np.array([[3],[0]]))]
         ]
 
+
 dat = [
     np.array([[-2, 0], [-2, 1], [-2,-1], [3, 0]]).T,
     np.array([[2, 0], [2, 1], [2,-1], [-3, 0]]).T
 ]
-
+"""
 """
 # red left, blue right
 fig = plt.figure()
@@ -56,6 +57,7 @@ plt.scatter(dat[1][0], dat[1][1], color="blue")
 plt.show()
 """
 
+dat = [scipy.io.loadmat("case4.mat")["a"].T, scipy.io.loadmat("case4.mat")["b"].T]
 map_func = map_class(dat[0], dat[1])
 dat_list = list(np.concatenate((dat[0], dat[1]), axis=1).T)
 
@@ -69,23 +71,21 @@ all_dat = np.array(dat_list)
 a_res = np.array(res, dtype=np.int)
 a_res[a_res == 0] = -1
 
-blue = all_dat[a_res == -1]
-red = all_dat[a_res == 1]
-plt.scatter(blue[:, 0], blue[:, 1], color="red")
-plt.scatter(red[:, 0], red[:, 1], color="blue")
-
 min_x = np.min(all_dat[:, 0])
 max_x = np.max(all_dat[:, 0])
 min_y = np.min(all_dat[:, 1])
 max_y = np.max(all_dat[:, 1])
-delta = 0.01
+delta = 0.01 # make the delta proportional to the size of stuff
+# Draw seperation lines and don't classify the points
 x = np.arange(min_x, max_x, delta)
 y = np.arange(min_y, max_x, delta)
+"""
 grid_x, grid_y = np.meshgrid(x, y)
 #grid_x, grid_y = np.mgrid[min_x:max_x:500j, min_y:max_y:500j]
 grid_res = griddata(all_dat, a_res, (grid_x, grid_y), method='cubic')
 plt.contour(grid_x.T, grid_y.T, grid_res.T, levels=[0])
 plt.show()
+"""
 
 # poke values in the correct places
 #ipdb.set_trace()
