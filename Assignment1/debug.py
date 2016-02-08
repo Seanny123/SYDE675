@@ -84,7 +84,7 @@ y = np.arange(min_y, max_x, delta)
 grid_x, grid_y = np.meshgrid(x, y)
 #grid_x, grid_y = np.mgrid[min_x:max_x:500j, min_y:max_y:500j]
 grid_res = griddata(all_dat, a_res, (grid_x, grid_y), method='cubic')
-plt.contour(grid_x.T, grid_y.T, grid_res.T)
+plt.contour(grid_x.T, grid_y.T, grid_res.T, levels=[0])
 plt.show()
 
 # poke values in the correct places
