@@ -1,0 +1,2 @@
+- GED is messed, because the covariance isn't being ajusted appropriately
+- I can't get the right dimensions for KNN
