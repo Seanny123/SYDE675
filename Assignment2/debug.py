@@ -2,29 +2,14 @@ import numpy as np
 import scipy.linalg
 import scipy.io
 from numpy.linalg import norm, inv
-import ipdb
+#import ipdb
 
-def trans_cov(dat, cov, mean=np.array([[0],[0]])):
-    evals, evecs = scipy.linalg.eigh(cov)
-    c = np.dot(evecs, np.diag(np.sqrt(evals)))
-    res = np.dot(c,dat)
-    if not np.allclose(np.round(np.cov(res)), cov):
-        print(np.cov(res))
-    res = res + mean
-    assert np.allclose(np.round(np.mean(res, axis=1)), mean.T[0])
-    
-    return res
-
-dats = [
-            [trans_cov(np.random.randn(2, 200), np.eye(2)),
-             trans_cov(np.random.randn(2, 200), np.eye(2), np.array([[3],[0]]))],
-    
-            [trans_cov(np.random.randn(2, 200), np.array([[4,3],[3,4]]), np.array([[-1],[0]])),
-             trans_cov(np.random.randn(2, 200), np.array([[4,3],[3,4]]), np.array([[1],[0]]))],
-    
-            [trans_cov(np.random.randn(2, 200), np.array([[3,1],[1,2]])),
-             trans_cov(np.random.randn(2, 200), np.array([[7,-3],[-3,4]]), np.array([[3],[0]]))]
-        ]
+dats = []
+mat = scipy.io.loadmat("assign2.mat")
+dats.append([mat["a1"], mat["b1"]])
+dats.append([mat["a2"], mat["b2"]])
+dats.append([mat["a3"], mat["b3"]])
+dats.append([mat["a4"], mat["b4"]])
 
 def med(c1, c2):
     """Create an med function"""
@@ -56,12 +41,14 @@ def knn(c1, c2, k, offset=5):
     c_all = np.concatenate((c1[:, offset:], c2[:, offset:]), axis=1)
     err_count = 0
 
+    # iterate through all the test points using indexing
     # because numpy nditer is psychotic
-    for c_ind in xrange(c_all.shape[1]):
+    for c_ind in xrange(2*offset):
         val = c_all[:, c_ind]
         # find the nearest K neighbours
+        #ipdb.set_trace()
         ind = np.argpartition(norm(c_all.T - val, axis=1), k+1)[:k+1][1:k+1]
-        
+
         # class the point where the majority of the neighbours are
         sort_res = 0
         for ix in ind:
@@ -73,21 +60,18 @@ def knn(c1, c2, k, offset=5):
         if sort_res > 0:
             c1_res[:, c1_count] = val
             c1_count += 1
-            
+
             if c_ind > c1.shape[1]:
                 err_count += 1
         else:
             c2_res[:, c2_count] = val
             c2_count += 1
-            
+
             if c_ind <= c1.shape[1]:
                 err_count += 1
 
-    assert c1_count + c2_count == c1.shape[1] + c2.shape[1] - 2*offset
+    assert c1_count + c2_count == 2*offset
     return (c1_res[:, :c1_count], c2_res[:, :c2_count], err_count)
-
-funcs = [med, ged, (knn, 1), (knn, 3), (knn, 5)]
-res = [[], [], [], [], []]
 
 def get_err(funct, dat1, dat2, offset=5):
     # get the function, calculate and return the error
@@ -119,19 +103,16 @@ def get_err(funct, dat1, dat2, offset=5):
 
         return float(tot_err) / float(dat_length)
 
-
-res = [[], [], [], [], []]
+funcs = [med, ged, (knn, 1), (knn, 3), (knn, 5)]
+res = [[ [] for j in range(len(dats)) ] for i in range(len(funcs))]
 
 # jack-knife
 for f_i, funct in enumerate(funcs):
-    for dat in dats:
+    for d_i, dat in enumerate(dats):
         dat1 = dat[0]
         dat2 = dat[1]
 
-        for offset in xrange(1, 200):
-            if funct == ged:
-                ipdb.set_trace()
+        for offset in xrange(200):
+            res[f_i][d_i].append(get_err(funct, dat1, dat2, 1))
 
-            res[f_i].append(get_err(funct, dat1, dat2, offset))
-            
 p_err_final = 1/400 * np.sum(res, axis=1)
