@@ -56,7 +56,8 @@ def knn(c1, c2, k, offset=5):
 
     # iterate through all the test points using indexing
     # because numpy nditer is psychotic
-    for c_ind in chain(xrange(offset), xrange(c1_len, c1_len+offset)):
+    print("Offset:%s c1_len:%s c1_len_offset:%s" %(offset, c1_len, c1_len+offset))
+    for c_ind in chain(xrange(offset, c1_len), xrange(c1_len+offset, c1_len*2)):
         val = c_all[:, c_ind]
         # find the nearest K neighbours
         ind = np.argpartition(norm(c_train.T - val, axis=1), k+1)[:k+1][1:k+1]
@@ -64,25 +65,31 @@ def knn(c1, c2, k, offset=5):
         # class the point where the majority of the neighbours are
         sort_res = 0
         for ix in ind:
-            if ix < c1.shape[1] - offset:
+            if ix < offset:
                 sort_res += 1
             else:
                 sort_res -= 1
+
+        print("c_ind: %s" %c_ind)
+        print("val: %s" %val)
+        print("closest: %s" %c_train[:, ind[0]])
+        print("sort_res: %s" %sort_res)
+        #ipdb.set_trace()
 
         if sort_res > 0:
             c1_res[:, c1_count] = val
             c1_count += 1
 
-            if c_ind > c1.shape[1]:
+            if c_ind > c1_len:
                 err_count += 1
         else:
             c2_res[:, c2_count] = val
             c2_count += 1
 
-            if c_ind <= c1.shape[1]:
+            if c_ind <= c1_len:
                 err_count += 1
 
-    assert c1_count + c2_count == 2*offset
+    assert c1_count + c2_count == 2*(c1_len-offset)
     return (c1_res[:, :c1_count], c2_res[:, :c2_count], err_count)
 
 def get_err(funct, dat1, dat2, train=5):
@@ -93,6 +100,7 @@ def get_err(funct, dat1, dat2, train=5):
 
     if type(funct) is tuple:
         res = funct[0](dat1, dat2, funct[1], train)
+        assert float(res[2]) <= tot_res
         return float(res[2]) / tot_res
     else:
         func = funct(dat1[:, :train], dat2[:, :train])
@@ -119,21 +127,18 @@ def get_err(funct, dat1, dat2, train=5):
         assert tot_err <= tot_res
         return float(tot_err) / tot_res
 
-funcs = [med, ged]#, (knn, 1), (knn, 3), (knn, 5)]
-res = [[ [] for j in range(len(dats)) ] for i in range(len(funcs))]
+dat = [
+    np.array([[-2, 0], [-2, 1], [-2,-1], [3, 0]]).T,
+    np.array([[2, 0], [2, 1], [2,-1], [-3, 0]]).T
+]
+res = []
 
-# jack-knife
-for f_i, funct in enumerate(funcs):
-    for d_i, dat in enumerate(dats):
-        dat1 = dat[0]
-        dat2 = dat[1]
+dat1 = dat[0]
+dat2 = dat[1]
 
-        for _ in xrange(200):
-            res[f_i][d_i].append(get_err(funct, dat1, dat2, 199))
-            dat1 = np.roll(dat1, 1, axis=1)
-            dat2 = np.roll(dat2, 1, axis=1)
+for _ in xrange(dat1.shape[1]):
+    res.append(get_err((knn, 1), dat1, dat2, dat1.shape[1]-1))
+    dat1 = np.roll(dat1, 1, axis=1)
+    dat2 = np.roll(dat2, 1, axis=1)
 
-p_err_final = np.sum(res, axis=2) / 200.0
-pt = p_err_final.T
-print(pt)
 ipdb.set_trace()
